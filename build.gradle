@@ -192,7 +192,7 @@ neoForge.ideSyncTask generateModMetadata
 
 // Publishing block from the MDK removed on purpose: this unofficial port must not be published.
 
-// Ship the original license notice and the LGPL/GPL texts inside the jar (unchanged).
+// Ship the LGPL/GPL texts (LICENSE = LGPL-3.0 text) and NOTICE.md (incl. the original license notice) inside the jar.
 var licenseSuffix = "_${mod_id}"
 tasks.named('jar', Jar).configure {
     from('LICENSE') { rename { "LICENSE" + licenseSuffix } }

@@ -90,7 +90,7 @@ For non-technical support and questions, join the developer's [Discord](https://
 
 ## License
 
-All source code and assets are licensed under LGPL 3.0.
+All source code and assets are licensed under LGPL 3.0 (`LICENSE` / `COPYING.LESSER`; copyright notice in `NOTICE.md`).
 
 ## Donations
 

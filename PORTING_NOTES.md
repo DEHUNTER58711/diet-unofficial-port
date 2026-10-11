@@ -183,3 +183,6 @@ sugars changes from light pastel pink to a darker purple (L 0.78→0.60, S 1.00�
 different look for the most-discussed group (#178). **Kept the upstream colours** (also what
 existing screenshots, wikis and data packs show); modpacks can set `color` in a group file.
 Drawing adds alpha (`| 0xFF000000` / `ARGB.color(255, …)`).
+
+## Licence files (repository hygiene)
+`LICENSE` is now the plain LGPL-3.0 text (identical to `COPYING.LESSER`) so GitHub detects the licence; upstream's 25-line `LICENSE` notice was moved verbatim into `NOTICE.md`. The jar still ships `LICENSE_diet`, `COPYING_diet`, `COPYING.LESSER_diet` and `NOTICE_diet.md` (releases after 2.1.1+…unofficial.1 contain the new `LICENSE`).
