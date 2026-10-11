@@ -1,0 +1,36 @@
+# Unofficial NeoForge 26.3 port of Diet (original by C4 / TheIllusiveC4, Illusive Soulworks, LGPL-3.0-or-later).
+# Modified 2026 by DEHunter58711. Please do not report issues of this port to the original author.
+modLoader="javafml"
+loaderVersion="[1,)"
+license="${mod_license}"
+
+[[mods]]
+    modId="${mod_id}"
+    version="${mod_version}"
+    displayName="${mod_name}"
+    # iconFile instead of the deprecated logoFile (26.3 loader warns about logoFile)
+    iconFile="diet_icon.png"
+    credits="Original mod: C4 / TheIllusiveC4 (Illusive Soulworks). Unofficial NeoForge 26.3 port: DEHunter58711. Not affiliated with or endorsed by the original author."
+    authors="${mod_authors}"
+    description='''
+A customizable food group-based nutrition and diet system.
+
+UNOFFICIAL port to Minecraft 26.3 / NeoForge. Please do NOT report problems with this port to the original author.
+'''
+
+[[mixins]]
+    config="${mod_id}.mixins.json"
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[26.3.0.51-beta,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"

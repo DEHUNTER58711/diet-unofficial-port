@@ -1,0 +1,13 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="LGPL-3.0-or-later"
+[[mods]]
+    modId="diet_gametest"
+    version="1"
+    displayName="Diet GameTests (QA only, not for release)"
+[[dependencies.diet_gametest]]
+    modId="diet"
+    type="required"
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"

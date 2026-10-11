@@ -1,0 +1,13 @@
+# Gradle / IDE
+.gradle/
+build/
+run/
+runs/
+out/
+.idea/
+*.iml
+# Local reference material (not part of the port sources)
+orig/
+.mcsrc/
+qa/logs/
+qa/jars/
