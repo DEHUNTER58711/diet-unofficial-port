@@ -45,5 +45,14 @@ public interface IDietGroup {
 
   boolean contains(ItemStack stack);
 
+  /**
+   * Port addition: true if the item was explicitly removed from this group by data
+   * ("remove" lists). Such items are also never assigned to this group by the recipe-based
+   * value generator.
+   */
+  default boolean isExcluded(ItemStack stack) {
+    return false;
+  }
+
   CompoundTag save();
 }

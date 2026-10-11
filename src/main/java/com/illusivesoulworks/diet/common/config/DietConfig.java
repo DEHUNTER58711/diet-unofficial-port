@@ -63,6 +63,14 @@ public class DietConfig {
     public final ModConfigSpec.IntValue buttonY;
     public final ModConfigSpec.ConfigValue<String> textColor;
     public final ModConfigSpec.BooleanValue addButton;
+    // Port features (new keys, all default to the behaviour described in PORTING_NOTES.md)
+    public final ModConfigSpec.ConfigValue<List<? extends String>> buttonScreens;
+    public final ModConfigSpec.BooleanValue buttonDragging;
+    public final ModConfigSpec.BooleanValue foodTooltips;
+    public final ModConfigSpec.BooleanValue groupEffectTooltip;
+    public final ModConfigSpec.BooleanValue groupRowTooltips;
+    public final ModConfigSpec.BooleanValue effectSourceTooltips;
+    public final ModConfigSpec.BooleanValue effectNotifications;
 
     public Client(ModConfigSpec.Builder builder) {
       addButton =
@@ -78,6 +86,44 @@ public class DietConfig {
       textColor =
           builder.comment("The primary text color of the Diet GUI, as an integer or hexadecimal.")
               .translation(CONFIG_PREFIX + "textColor").define("textColor", "4210752");
+
+      buttonScreens = builder.comment("""
+              Screens that get the Diet button (fully qualified class or interface names; sub-classes
+              match too). Add other inventory screens here; remove entries to hide the button there.""")
+          .translation(CONFIG_PREFIX + "buttonScreens")
+          .defineList("buttonScreens", List.of(
+                  "net.minecraft.client.gui.screens.inventory.InventoryScreen",
+                  "top.theillusivec4.curios.api.client.ICuriosScreen",
+                  "top.theillusivec4.curios.client.screen.CuriosScreen"),
+              () -> "net.minecraft.client.gui.screens.inventory.InventoryScreen",
+              s -> s instanceof String);
+
+      buttonDragging = builder.comment("""
+              If enabled, the Diet button can be moved by dragging it with Shift + left mouse button.
+              The new position is saved to buttonX/buttonY.""")
+          .translation(CONFIG_PREFIX + "buttonDragging").define("buttonDragging", true);
+
+      foodTooltips = builder.comment(
+              "If disabled, Diet adds no food group (\"When eaten\") lines to item tooltips.")
+          .translation(CONFIG_PREFIX + "foodTooltips").define("foodTooltips", true);
+
+      groupEffectTooltip = builder.comment("""
+              If enabled, the Diet effects tooltip lists every active effect separately with its title
+              and the food group condition that causes it. If disabled, all effects are merged like
+              in the original mod.""")
+          .translation(CONFIG_PREFIX + "groupEffectTooltip").define("groupEffectTooltip", true);
+
+      groupRowTooltips = builder.comment(
+              "If enabled, hovering a food group in the Diet screen shows the effects it influences.")
+          .translation(CONFIG_PREFIX + "groupRowTooltips").define("groupRowTooltips", true);
+
+      effectSourceTooltips = builder.comment(
+              "If enabled, status effect tooltips in the inventory show which diet condition causes them.")
+          .translation(CONFIG_PREFIX + "effectSourceTooltips").define("effectSourceTooltips", true);
+
+      effectNotifications = builder.comment(
+              "If enabled, an on-screen message names the cause when a harmful diet effect starts.")
+          .translation(CONFIG_PREFIX + "effectNotifications").define("effectNotifications", true);
     }
   }
 
@@ -92,6 +138,7 @@ public class DietConfig {
     public final ModConfigSpec.ConfigValue<List<? extends String>> foodOverrides;
 
     public final ModConfigSpec.BooleanValue hideTooltipsUntilEaten;
+    public final ModConfigSpec.BooleanValue creativeBypassesHiddenTooltips;
     public final ModConfigSpec.BooleanValue generateGroupsForEmptyItems;
 
     public Server(ModConfigSpec.Builder builder) {
@@ -139,6 +186,11 @@ public class DietConfig {
               "If enabled, food group tooltips are hidden until player has eaten that type of item.")
           .translation(CONFIG_PREFIX + "hideTooltipsUntilEaten")
           .define("hideTooltipsUntilEaten", false);
+
+      creativeBypassesHiddenTooltips = builder.comment(
+              "If enabled, players in Creative mode always see food group tooltips (see hideTooltipsUntilEaten).")
+          .translation(CONFIG_PREFIX + "creativeBypassesHiddenTooltips")
+          .define("creativeBypassesHiddenTooltips", true);
     }
 
     private final Map<Item, Float> overrideMap = new HashMap<>();

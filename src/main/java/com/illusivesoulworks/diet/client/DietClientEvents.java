@@ -68,8 +68,11 @@ public class DietClientEvents {
       Identifier.fromNamespaceAndPath(DietConstants.MOD_ID, "textures/gui/icons.png");
 
 
+  private static final java.util.Set<java.util.UUID> NOTIFIED = new java.util.HashSet<>();
+
   public static void tick(Minecraft mc) {
     LocalPlayer player = mc.player;
+    notifyHarmfulEffects(mc, player);
 
     if (player != null && mc.isWindowActive() && !(mc.gui.screen() instanceof DietScreen) &&
         DietKeys.OPEN_GUI.consumeClick()) {
@@ -77,11 +80,42 @@ public class DietClientEvents {
     }
   }
 
+  /**
+   * Port feature (#166): when a harmful diet effect becomes active, show its cause once in the
+   * action bar ("Hunger, Movement Speed: caused by Sugars at 80%-100%").
+   */
+  private static void notifyHarmfulEffects(Minecraft mc, LocalPlayer player) {
+
+    if (player == null) {
+      NOTIFIED.clear();
+      return;
+    }
+
+    if (player.tickCount % 20 != 0 || !DietConfig.CLIENT.effectNotifications.get()) {
+      return;
+    }
+    java.util.Set<java.util.UUID> current = new java.util.HashSet<>();
+
+    for (com.illusivesoulworks.diet.api.type.IDietEffect effect :
+        DietEffectSources.activeHarmful(player)) {
+      current.add(effect.getUuid());
+
+      if (!NOTIFIED.contains(effect.getUuid())) {
+        mc.gui.hud.setOverlayMessage(Component.translatable("message.diet.harmful_effect",
+                DietEffectSources.title(effect), DietEffectSources.describeConditions(effect))
+            .withStyle(ChatFormatting.RED), false);
+      }
+    }
+    NOTIFIED.retainAll(current);
+    NOTIFIED.addAll(current);
+  }
+
   public static DynamicButton getButton(Screen screen) {
 
     if (DietConfig.CLIENT.addButton.get() && screen instanceof AbstractContainerScreen<?>) {
       AbstractContainerScreen<?> containerScreen = (AbstractContainerScreen<?>) screen;
-      // Port: the button is only created for AbstractContainerScreens.
+      // Port: the button is only created for AbstractContainerScreens; with addButton = false
+      // null is returned and the listener skips it.
       return new DynamicButton(containerScreen,
           ClientServices.INSTANCE.getGuiLeft(containerScreen) + DietConfig.CLIENT.buttonX.get(),
           containerScreen.height / 2 + DietConfig.CLIENT.buttonY.get(), 20, 18, 0, 0, 19, ICONS,
@@ -92,9 +126,13 @@ public class DietClientEvents {
 
   public static void renderItemTooltip(Player player, ItemStack stack, List<Component> tooltips) {
 
-    if (player != null) {
+    // Port feature #209: food tooltips can be disabled completely.
+    if (player != null && DietConfig.CLIENT.foodTooltips.get()) {
 
-      if (DietConfig.SERVER.hideTooltipsUntilEaten.get() &&
+      // Port feature #212: Creative players see all tooltips (configurable).
+      boolean bypass = player.isCreative() && DietConfig.SERVER.creativeBypassesHiddenTooltips.get();
+
+      if (!bypass && DietConfig.SERVER.hideTooltipsUntilEaten.get() &&
           Services.CAPABILITY.get(player)
               .map(tracker -> !tracker.getEaten().contains(stack.getItem())).orElse(false)) {
         return;

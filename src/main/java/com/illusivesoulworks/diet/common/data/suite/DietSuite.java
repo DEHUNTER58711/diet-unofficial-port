@@ -26,6 +26,7 @@
 
 package com.illusivesoulworks.diet.common.data.suite;
 
+import com.illusivesoulworks.diet.common.data.effect.DietEffect;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.illusivesoulworks.diet.api.type.IDietEffect;
@@ -66,7 +67,16 @@ public final class DietSuite implements IDietSuite {
         set.add(DietGroup.load((CompoundTag) Objects.requireNonNull(groups.get(key))));
       }
     }
-    return new DietSuite(tag.getStringOr("Name", ""), set, new ArrayList<>());
+    // Port feature: effects are synced as well (used for the effect-source tooltips).
+    List<IDietEffect> effects = new ArrayList<>();
+
+    for (net.minecraft.nbt.Tag t : tag.getListOrEmpty("Effects")) {
+
+      if (t instanceof CompoundTag e) {
+        effects.add(DietEffect.load(e));
+      }
+    }
+    return new DietSuite(tag.getStringOr("Name", ""), set, effects);
   }
 
   @Override
@@ -94,6 +104,15 @@ public final class DietSuite implements IDietSuite {
       groups.put(group.getName(), group.save());
     }
     tag.put("Groups", groups);
+    net.minecraft.nbt.ListTag effects = new net.minecraft.nbt.ListTag();
+
+    for (IDietEffect effect : this.effects) {
+
+      if (effect instanceof DietEffect dietEffect) {
+        effects.add(dietEffect.save());
+      }
+    }
+    tag.put("Effects", effects);
     return tag;
   }
 

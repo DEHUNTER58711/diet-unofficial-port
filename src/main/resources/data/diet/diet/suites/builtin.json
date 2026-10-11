@@ -9,6 +9,7 @@
   ],
   "effects": [
     {
+      "title": "diet.effect.balanced",
       "attributes": [
         {
           "name": "minecraft:max_health",
@@ -28,7 +29,12 @@
       ],
       "conditions": [
         {
-          "groups": ["proteins", "fruits", "vegetables", "grains"],
+          "groups": [
+            "proteins",
+            "fruits",
+            "vegetables",
+            "grains"
+          ],
           "match": "all",
           "above": 0.8,
           "below": 1.0
@@ -36,6 +42,7 @@
       ]
     },
     {
+      "title": "diet.effect.nourished",
       "attributes": [
         {
           "name": "minecraft:max_health",
@@ -45,7 +52,7 @@
         {
           "name": "minecraft:knockback_resistance",
           "operation": "add",
-          "amount": 0.10
+          "amount": 0.1
         },
         {
           "name": "minecraft:armor_toughness",
@@ -55,7 +62,12 @@
       ],
       "conditions": [
         {
-          "groups": ["proteins", "fruits", "vegetables", "grains"],
+          "groups": [
+            "proteins",
+            "fruits",
+            "vegetables",
+            "grains"
+          ],
           "match": "every",
           "above": 0.8,
           "below": 1.0
@@ -63,6 +75,7 @@
       ]
     },
     {
+      "title": "diet.effect.sugar",
       "attributes": [
         {
           "name": "minecraft:movement_speed",
@@ -78,7 +91,9 @@
       ],
       "conditions": [
         {
-          "groups": ["sugars"],
+          "groups": [
+            "sugars"
+          ],
           "match": "all",
           "above": 0.8,
           "below": 1.0

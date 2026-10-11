@@ -26,4 +26,17 @@ public interface IDietCondition {
   DietEffect.MatchMethod getMatchMethod();
 
   int getMatches(Player player, Map<String, Float> values);
+
+  // Port additions: used to explain effects in tooltips (#178, #166).
+  default java.util.Set<String> getGroups() {
+    return java.util.Set.of();
+  }
+
+  default double getAbove() {
+    return 0.0;
+  }
+
+  default double getBelow() {
+    return 1.0;
+  }
 }

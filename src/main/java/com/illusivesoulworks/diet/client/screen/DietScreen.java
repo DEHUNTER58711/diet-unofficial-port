@@ -17,6 +17,7 @@
 /*
  * Modified 2026 by DEHunter58711 for the unofficial NeoForge 26.3 port of Diet
  * (original: Copyright (C) 2021-2023 Illusive Soulworks, LGPL-3.0-or-later).
+ * - group rows show the effects they influence (Phase B, #178)
  * - rendering via GuiGraphicsExtractor, tinted blits instead of Tesselator, own nine-slice
  *   background sprite, alpha added to all text colours, KeyEvent input
  */
@@ -35,7 +36,8 @@ import com.illusivesoulworks.diet.common.config.DietConfig;
 import com.illusivesoulworks.diet.common.data.effect.DietEffectsInfo;
 import com.illusivesoulworks.diet.common.data.suite.DietSuites;
 import com.illusivesoulworks.diet.platform.Services;
-import com.google.common.collect.Lists;
+import com.illusivesoulworks.diet.client.DietEffectSources;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -174,7 +176,7 @@ public class DietScreen extends Screen {
             diet -> DietSuites.getSuite(this.minecraft.level, diet.getSuite()).ifPresent(suite -> {
               int y = this.height / 2 - this.ySize / 2 + 25;
               int x = this.width / 2 - this.xSize / 2 + 10;
-              Component tooltip = null;
+              List<Component> tooltip = null;
 
               for (IDietGroup group : suite.getGroups()) {
                 guiGraphics.item(new ItemStack(group.getIcon()), x, y - 5);
@@ -203,23 +205,38 @@ public class DietScreen extends Screen {
                 guiGraphics.text(this.font, percentText, xPos, yPos, opaque(color.getRGB()),
                     false);
                 int lowerY = y - 5;
-                int upperX = x + 16;
-                int upperY = lowerY + 16;
+                // Port feature (#178, #166): the whole row is hoverable and also lists the
+                // effects that this group's thresholds trigger.
+                int upperX = x + this.xSize - 20;
+                int upperY = lowerY + 18;
 
-                if (mouseX >= x && mouseX <= upperX && mouseY >= lowerY && mouseY <= upperY) {
+                if (mouseX >= x && mouseX <= upperX && mouseY >= lowerY && mouseY < upperY) {
                   String key =
                       "groups." + DietConstants.MOD_ID + "." + group.getName() + ".tooltip";
+                  List<Component> lines = new ArrayList<>();
 
                   if (Language.getInstance().has(key)) {
-                    tooltip = Component.translatable(key);
+                    lines.add(Component.translatable(key));
+                  }
+
+                  if (DietConfig.CLIENT.groupRowTooltips.get()) {
+                    List<Component> sources = DietEffectSources.groupTooltip(group);
+
+                    if (!sources.isEmpty() && !lines.isEmpty()) {
+                      lines.add(Component.empty());
+                    }
+                    lines.addAll(sources);
+                  }
+
+                  if (!lines.isEmpty()) {
+                    tooltip = lines;
                   }
                 }
                 y += 20;
               }
 
               if (tooltip != null) {
-                List<Component> tooltips = Lists.newArrayList(tooltip);
-                guiGraphics.setComponentTooltipForNextFrame(this.font, tooltips, mouseX, mouseY);
+                guiGraphics.setComponentTooltipForNextFrame(this.font, tooltip, mouseX, mouseY);
               }
             }));
       }

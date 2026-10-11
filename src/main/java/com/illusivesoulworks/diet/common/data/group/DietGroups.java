@@ -50,6 +50,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.ResourceManager;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.resources.FileToIdConverter;
@@ -60,7 +61,18 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 
-public class DietGroups extends SimplePreparableReloadListener<Map<Identifier, JsonElement>> {
+public class DietGroups extends SimplePreparableReloadListener<DietGroups.Prepared> {
+
+  /** groups = data/&lt;ns&gt;/diet/groups, entries = data/&lt;ns&gt;/diet/group_entries (new). */
+  public record Prepared(Map<Identifier, JsonElement> groups, Map<Identifier, JsonElement> entries) {
+  }
+
+  // Port: NeoForge conditions ("neoforge:conditions") are evaluated with this context.
+  private DynamicOps<JsonElement> ops = JsonOps.INSTANCE;
+
+  public void setConditionOps(DynamicOps<JsonElement> ops) {
+    this.ops = ops;
+  }
 
   private static final Gson GSON =
       (new GsonBuilder()).setPrettyPrinting().disableHtmlEscaping().create();
@@ -76,13 +88,18 @@ public class DietGroups extends SimplePreparableReloadListener<Map<Identifier, J
   }
 
   @Override
-  protected Map<Identifier, JsonElement> prepare(@Nonnull ResourceManager resourceManager,
-                                                 @Nonnull ProfilerFiller profilerFiller) {
+  protected Prepared prepare(@Nonnull ResourceManager resourceManager,
+                             @Nonnull ProfilerFiller profilerFiller) {
+    return new Prepared(scan(resourceManager, "diet/groups", this.ops),
+        scan(resourceManager, "diet/group_entries", this.ops));
+  }
+
+  public static Map<Identifier, JsonElement> scan(ResourceManager resourceManager, String dir,
+                                                  DynamicOps<JsonElement> ops) {
     Map<Identifier, JsonElement> map = new HashMap<>();
-    SimpleJsonResourceReloadListener.scanDirectory(resourceManager,
-        FileToIdConverter.json("diet/groups"), JsonOps.INSTANCE, Codec.PASSTHROUGH.xmap(
-            d -> d.convert(JsonOps.INSTANCE).getValue(), j -> new Dynamic<>(JsonOps.INSTANCE, j)),
-        map);
+    SimpleJsonResourceReloadListener.scanDirectory(resourceManager, FileToIdConverter.json(dir),
+        ops, Codec.PASSTHROUGH.xmap(d -> d.convert(JsonOps.INSTANCE).getValue(),
+            j -> new Dynamic<>(JsonOps.INSTANCE, j)), map);
     return map;
   }
 
@@ -137,9 +154,10 @@ public class DietGroups extends SimplePreparableReloadListener<Map<Identifier, J
   }
 
   @Override
-  protected void apply(@Nonnull Map<Identifier, JsonElement> object,
+  protected void apply(@Nonnull Prepared prepared,
                        @Nonnull ResourceManager resourceManager,
                        @Nonnull ProfilerFiller profilerFiller) {
+    Map<Identifier, JsonElement> object = prepared.groups();
     Map<String, DietGroup.Builder> map = new HashMap<>();
 
     for (Map.Entry<Identifier, JsonElement> entry : object.entrySet()) {
@@ -171,12 +189,78 @@ public class DietGroups extends SimplePreparableReloadListener<Map<Identifier, J
         DietConstants.LOG.error("Parsing error loading diet group {}", resourcelocation, e);
       }
     }
+    applyEntries(map, prepared.entries());
     groups = map.entrySet().stream()
         .collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, entry -> entry.getValue().build()));
     DietConstants.LOG.info("Loaded {} diet groups", map.size());
   }
 
+  /**
+   * Port feature: data/&lt;ns&gt;/diet/group_entries/*.json. Format:
+   * <pre>
+   * {
+   *   "neoforge:conditions": [{"type": "neoforge:mod_loaded", "modid": "examplemod"}],
+   *   "groups": {"proteins": ["examplemod:tofu", "#c:foods/tofu"]},
+   *   "remove": {"fruits": ["minecraft:enchanted_golden_apple"]}
+   * }
+   * </pre>
+   * Files are applied in id order; unknown groups are reported.
+   */
+  private void applyEntries(Map<String, DietGroup.Builder> map,
+                            Map<Identifier, JsonElement> entries) {
+    int count = 0;
+
+    for (Identifier id : entries.keySet().stream().sorted().toList()) {
+
+      if (id.getPath().startsWith("_")) {
+        continue;
+      }
+      String source = "diet/group_entries " + id;
+
+      try {
+        JsonObject obj = GsonHelper.convertToJsonObject(entries.get(id), "top element");
+
+        for (String key : new String[] {"groups", "remove"}) {
+
+          if (!obj.has(key)) {
+            continue;
+          }
+          JsonObject groupsObj = GsonHelper.getAsJsonObject(obj, key);
+
+          for (Map.Entry<String, JsonElement> e : groupsObj.entrySet()) {
+            DietGroup.Builder builder = map.get(e.getKey());
+
+            if (builder == null) {
+              DietConstants.LOG.warn("Unknown diet group {} in {}", e.getKey(), source);
+              continue;
+            }
+            DietItemList list = DietItemList.parse(e.getValue(), source);
+
+            if (key.equals("groups")) {
+              builder.add(list);
+            } else {
+              builder.remove(list);
+            }
+          }
+        }
+        count++;
+      } catch (IllegalArgumentException | JsonParseException e) {
+        DietConstants.LOG.error("Parsing error loading diet group entries {}", id, e);
+      }
+    }
+    DietConstants.LOG.info("Loaded {} diet group entry files", count);
+  }
+
   private void buildGroup(DietGroup.Builder builder, JsonObject topElement) {
+
+    // Port feature: optional item lists directly in the group file (fix for #227 when used).
+    if (topElement.has("items")) {
+      builder.add(DietItemList.parse(topElement.get("items"), "diet group " + builder.getName()));
+    }
+
+    if (topElement.has("remove")) {
+      builder.remove(DietItemList.parse(topElement.get("remove"), "diet group " + builder.getName()));
+    }
 
     if (topElement.has("icon")) {
       String icon = GsonHelper.getAsString(topElement, "icon");

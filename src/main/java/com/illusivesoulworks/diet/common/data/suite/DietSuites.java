@@ -85,15 +85,17 @@ public class DietSuites extends SimplePreparableReloadListener<Map<Identifier, J
     // parsing and only reuses the directory scan (same path: data/<namespace>/diet/suites/).
   }
 
+  // Port: NeoForge conditions ("neoforge:conditions") are evaluated with this context.
+  private com.mojang.serialization.DynamicOps<JsonElement> ops = JsonOps.INSTANCE;
+
+  public void setConditionOps(com.mojang.serialization.DynamicOps<JsonElement> ops) {
+    this.ops = ops;
+  }
+
   @Override
   protected Map<Identifier, JsonElement> prepare(@Nonnull ResourceManager resourceManager,
                                                  @Nonnull ProfilerFiller profilerFiller) {
-    Map<Identifier, JsonElement> map = new HashMap<>();
-    SimpleJsonResourceReloadListener.scanDirectory(resourceManager,
-        FileToIdConverter.json("diet/suites"), JsonOps.INSTANCE, Codec.PASSTHROUGH.xmap(
-            d -> d.convert(JsonOps.INSTANCE).getValue(), j -> new Dynamic<>(JsonOps.INSTANCE, j)),
-        map);
-    return map;
+    return DietGroups.scan(resourceManager, "diet/suites", this.ops);
   }
 
   public static Optional<IDietSuite> getSuite(Level level, String name) {
@@ -245,7 +247,8 @@ public class DietSuites extends SimplePreparableReloadListener<Map<Identifier, J
       }
       UUID uuid = UUID.nameUUIDFromBytes((UUID_PREFIX + uuidSuffix).getBytes());
       uuidSuffix++;
-      builder.effect(new DietEffect(uuid, finalAttributes, finalStatusEffects, finalConditions));
+      builder.effect(new DietEffect(uuid, finalAttributes, finalStatusEffects, finalConditions,
+          GsonHelper.getAsString(effectObject, "title", null)));
     }
   }
 

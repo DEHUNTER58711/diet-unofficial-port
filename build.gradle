@@ -61,12 +61,16 @@ neoForge {
             systemProperty 'mixin.debug.export', 'true'
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id + ',diet_gametest'
+            // QA: -PdietDumpFoods=<file> writes all food items with their Diet groups.
+            systemProperty 'diet.dumpFoods', providers.gradleProperty('dietDumpFoods').getOrElse('')
         }
 
         server {
             server()
             programArgument '--nogui'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id + ',diet_gametest'
+            // QA: -PdietDumpFoods=<file> writes all food items with their Diet groups.
+            systemProperty 'diet.dumpFoods', providers.gradleProperty('dietDumpFoods').getOrElse('')
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.
@@ -75,6 +79,8 @@ neoForge {
         gameTestServer {
             type = "gameTestServer"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id + ',diet_gametest'
+            // QA: -PdietDumpFoods=<file> writes all food items with their Diet groups.
+            systemProperty 'diet.dumpFoods', providers.gradleProperty('dietDumpFoods').getOrElse('')
         }
 
         data {

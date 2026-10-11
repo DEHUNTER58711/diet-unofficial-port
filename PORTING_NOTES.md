@@ -40,7 +40,7 @@ Fabric/Quilt modules and SpectreLib were dropped.
 | Diet screen background | `minecraft:textures/gui/demo_background.png` | own nine-slice GUI sprite `diet:background` (`assets/diet/textures/gui/sprites/background.png`) | vanilla removed the demo background in 26.x |
 | Diet screen / button rendering | `GuiGraphics`, Tesselator `coloredBlit`, `ImageButton` | `GuiGraphicsExtractor`, tinted `blit`, `AbstractButton` drawing the same `icons.png` region, deferred tooltips | 26.3 render-state GUI |
 | Key category | `key.diet.category` string | `KeyMapping.Category` `diet:diet` → new lang key `key.category.diet.diet` (value copied from `key.diet.category` in all languages) | 26.3 key categories |
-| Curios | compile dependency on Curios API | `CuriosScreen` detected by class name | Curios 26.3 is only a beta |
+| Curios | compile dependency on Curios API | `CuriosScreen` detected by class name (Phase B: generalised to the `buttonScreens` config list) | Curios 26.3 is only a beta |
 | Mod metadata | | `iconFile = diet_icon.png` (instead of the deprecated `logoFile`), no update/issue/display URLs | |
 
 ### Alpha audit (26.3 drops text whose colour has alpha 0)
@@ -80,3 +80,97 @@ Fabric/Quilt modules and SpectreLib were dropped.
 - `runClient` cannot create a window on this box (no GLX visual / no Vulkan surface under Xvfb),
   so the client part was only verified by compilation; a `-Ddiet.selfcheck=true` class-loading
   check is built into `DietClientMod` for machines with a GPU.
+
+---
+
+# Phase B — improvements (new features and bug fixes)
+
+Full data format: [docs/DATAPACK_FORMAT.md](docs/DATAPACK_FORMAT.md). All Phase B additions are
+**additive**: every 1.20.1 data pack, config file and API call keeps working.
+
+## B1. Food groups via data packs + mod support (new feature, fixes #227)
+
+| What | Detail |
+|---|---|
+| `items` / `remove` in group files | members and exclusions directly in `data/<ns>/diet/groups/<group>.json`; `remove` beats tags and recipe generation |
+| `data/<ns>/diet/group_entries/*.json` | new folder: one file adds/removes items/tags for several groups (`groups` / `remove`), applied in id order after the group files |
+| NeoForge conditions | `neoforge:conditions` honoured on group, entry and suite files (`ConditionalOps`) → compat files for missing mods are skipped silently |
+| `{"id", "required": false}` | optional item ids inside the lists (as in vanilla tags) |
+| sync | added/removed lists are part of the `diet:groups` payload, so clients show the same groups |
+
+Built-in conditional compat files (`data/diet/diet/group_entries/`), chosen from Modrinth's
+NeoForge + 26.3 version lists (checked 2026-10-11 via the Modrinth API, jars loaded in a test
+server and every food item dumped with its resulting groups):
+
+| Mod (mod id) | 26.3 NeoForge build | Why a file |
+|---|---|---|
+| TofuCraftReload (`tofucraft`) | 26.3-28.0.6.0 | ~135 foods, most not covered by `c:` tags or recipes (tofu = proteins, edamame/soy = vegetables, sweets = sugars …). Soymilk bottles have 0 nutrition and stay without groups like vanilla milk. |
+| Fish of Thieves (`fishofthieves`) | 26.3.0.1 | 32 fish items (raw/cooked) → proteins |
+| UsefulFood Reborn (`usefulfood`) | 1.5.5-26.3 | 113 foods; sushi, oatmeal, fries etc. needed manual groups, rest derived from recipes |
+| Ecologics (`ecologics`) | 2.7.1 | coconut/prickly pear are tagged, maple syrup etc. classified manually |
+| Minecraft 26.x (`minecraft_26.json`) | — | fish buckets → proteins (as in upstream's 1.20 list, ids still valid) |
+
+Checked and **not** included: Farmer's Delight, Brewin' and Chewin', Pam's HarvestCraft 2,
+Croptopia — no NeoForge 26.3 build on Modrinth (Farmer's Delight's newest is 1.21.1). Crop and
+Kettle (on 26.3) adds no food items of its own. The ~130 optional mod ids in the upstream tag files
+were kept, so mods that get ported later with unchanged item ids work automatically.
+
+## B2. GUI / HUD (new features, fixes #164, #215, #194, #190)
+
+| Issue | Was | Now |
+|---|---|---|
+| #164 position not saved | `buttonX/Y` only editable in the file, SpectreLib reload issues | **Shift + drag** the button; position (relative to the inventory) is written to `diet-client.toml` (`buttonDragging` to turn off). NeoForge in-game config screen (Mods → Diet → Config) registered. |
+| #215 background texture | hard-coded vanilla `demo_background.png` | nine-slice GUI sprite `diet:background` (`assets/diet/textures/gui/sprites/background.png` + `.mcmeta`), replaceable by resource packs |
+| #194 Curios Menu V2 / #190 Inventory Profiles Next | button only on `InventoryScreen` + hard-coded Curios class; overlaps IPN | button attached in `ScreenEvent.Init.Post` to every screen listed in `buttonScreens` (class or interface names, default inventory + `CuriosScreen`/`CuriosScreenV2`), `addButton = false` disables it, positions movable to avoid overlaps |
+| tooltips | | button tooltip shows the active effects (as before) plus the drag hint |
+
+## B3. Where effects come from (new features, #178, #166, #53)
+
+- Optional `title` per suite effect (#53); the builtin suite now ships "Balanced Diet",
+  "Well Nourished" and "Too Much Sugar" (the 80–100 % sugar → Hunger + slowness, cause of #178).
+- Suite effects are now synced to clients (`diet:suites` carries effects with conditions).
+- Diet screen: the effects icon lists each effect with ✔/✘, its title and its condition
+  (`groupEffectTooltip`); hovering a **group row** lists the effects linked to that group
+  (`groupRowTooltips`).
+- Inventory status-effect tooltip (NeoForge `GatherEffectScreenTooltipsEvent`): "Diet: Too Much
+  Sugar" for effects caused by Diet (`effectSourceTooltips`).
+- Action bar notice when a harmful diet effect starts (#166, `effectNotifications`).
+
+## B4. Config + bug fixes
+
+| Issue | What it was | Status on 26.3 |
+|---|---|---|
+| #209 | request: disable the "When eaten" tooltips | new client option `foodTooltips` |
+| #212 | creative players cannot see groups with `hideTooltipsUntilEaten` | new server option `creativeBypassesHiddenTooltips` (default true) |
+| #227 | `remove` in a group tag had no effect: an item removed from all tags is "ungrouped" and gets groups from its recipe again | **fixed**: `remove` lists in group/entry files exclude the item from the group and from generation (GameTest `group_entries`). Tag `remove` keeps vanilla semantics (documented). |
+| #219 | death reset not working | caused by the per-world SpectreLib server config (edits to a global file had no effect / reset by worlds). Fixed by the global `config/diet-server.toml`; GameTests `death_penalty` and `death_penalty_disabled` (loss 0) |
+| #216 | server toml not generated | same root cause (SpectreLib only wrote `serverconfig/` inside a loaded world). NeoForge now creates `config/diet-server.toml` at server start; verified on the dedicated server. Not reproducible anymore. |
+| #217 (Fabric) | crash with `addButton = false` | Fabric-only (NPE in the Fabric screen hook); the NeoForge listener skips a null button. Not applicable. |
+
+New client options: `buttonScreens`, `buttonDragging`, `foodTooltips`, `groupEffectTooltip`,
+`groupRowTooltips`, `effectSourceTooltips`, `effectNotifications`. New server option:
+`creativeBypassesHiddenTooltips`. All config entries have names/tooltips for the NeoForge config
+screen (`gui.diet.config.<key>` + `.tooltip`; old `.name`/`.description` kept).
+
+Alpha audit (Phase B): new text uses `Component` styles; button/sprite tints `0xFFFFFFFF`;
+no raw `0xRRGGBB` colour reaches a draw call.
+
+## In-game differences vs. 1.20.1 (summary)
+- Server config is global (`config/diet-server.toml`), not per world.
+- Diet button can be dragged and appears on configured screens; panel texture is a sprite.
+- More tooltips (effect causes, group rows, status-effect source) and the harmful-effect notice
+  (all switchable).
+- Built-in effects have titles. Creative players see food groups even with hidden tooltips.
+
+## Testing (Phase B)
+- `./gradlew build` clean; `runGameTestServer`: **13 Diet GameTests** passed (Phase A tests plus
+  `group_entries` — add/remove/conditional file/sync, `death_penalty_disabled`,
+  `suite_sync_roundtrip`), with and without the five 26.3 food mods in `run/mods`.
+- Dedicated server with the release jar: (a) with TofuCraftReload, Fish of Thieves, UsefulFood
+  Reborn, Ecologics, Crop and Kettle (+ libs): 5 entry files loaded, 294 foods generated, no
+  Diet warnings (the only ERROR is TofuCraft's own data map); (b) Diet only: 1 entry file, compat
+  files silently skipped. `reload` and clean stop in both. Logs in `qa/logs/phaseB-*`.
+- Client: compile + class-loading self-check only (no GL on this box). Manual checklist for a
+  machine with a GPU: drag button with Shift and relog; resource pack replacing
+  `diet:textures/gui/sprites/background.png`; eat sugar to 80 % → notice + status tooltip
+  "Diet: Too Much Sugar"; hover group rows; `addButton=false`; Curios inventory.

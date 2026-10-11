@@ -1,0 +1,8 @@
+{
+  "groups": {
+    "fruits": ["minecraft:golden_carrot", {"id": "notamod:missing_item", "required": false}]
+  },
+  "remove": {
+    "sugars": ["minecraft:cookie"]
+  }
+}

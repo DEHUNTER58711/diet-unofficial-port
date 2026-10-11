@@ -179,6 +179,8 @@ public class DietValueGenerator {
             break;
           }
         }
+        // Port fix #227: groups that explicitly "remove" this item are never generated for it.
+        found.removeIf(group -> group.isExcluded(proxy));
         result.addAll(found);
       }
     }
@@ -226,10 +228,17 @@ public class DietValueGenerator {
       current.add(recipe);
     }
 
-    for (List<RecipeHolder<?>> list : result.values()) {
+    for (Map.Entry<Item, List<RecipeHolder<?>>> entry : result.entrySet()) {
+      List<RecipeHolder<?>> list = entry.getValue();
 
       if (list.size() > 1) {
-        list.sort(Comparator.comparing(h -> h.id().identifier().toString()));
+        // Port improvement: recipes from the item's own namespace are tried first (then by id),
+        // so e.g. another mod's odd recipe for minecraft:baked_potato no longer decides its
+        // groups just because its id sorts first. Upstream sorted by id only.
+        String ns = Services.REGISTRY.getItemKey(entry.getKey()).getNamespace();
+        list.sort(Comparator.<RecipeHolder<?>>comparingInt(
+                h -> h.id().identifier().getNamespace().equals(ns) ? 0 : 1)
+            .thenComparing(h -> h.id().identifier().toString()));
       }
     }
     RECIPES.putAll(result);

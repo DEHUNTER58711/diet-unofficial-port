@@ -26,17 +26,16 @@
 package com.illusivesoulworks.diet.client;
 
 import com.illusivesoulworks.diet.client.screen.DynamicButton;
-import com.illusivesoulworks.diet.common.integration.CuriosIntegration;
-import com.illusivesoulworks.diet.common.integration.IntegrationManager;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
+import com.illusivesoulworks.diet.common.config.DietConfig;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.GatherEffectScreenTooltipsEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
@@ -47,13 +46,15 @@ public class DietClientEventsListener {
     bus.addListener(DietClientEventsListener::initGui);
     bus.addListener(DietClientEventsListener::tick);
     bus.addListener(DietClientEventsListener::tooltip);
+    bus.addListener(DietClientEventsListener::effectTooltip);
   }
 
   public static void initGui(final ScreenEvent.Init.Post evt) {
     Screen screen = evt.getScreen();
 
-    if (screen instanceof InventoryScreen ||
-        (IntegrationManager.isCuriosLoaded() && CuriosIntegration.isCuriosScreen(screen))) {
+    // Port feature (#194, #190): screens are configurable (buttonScreens) instead of the
+    // hard-coded InventoryScreen / CuriosScreen check.
+    if (ScreenMatcher.matches(screen)) {
       DynamicButton button = DietClientEvents.getButton(screen);
 
       if (button != null) {
@@ -64,6 +65,14 @@ public class DietClientEventsListener {
 
   public static void tick(final ClientTickEvent.Post evt) {
     DietClientEvents.tick(Minecraft.getInstance());
+  }
+
+  // Port feature (#178, #166): status effect tooltips in the inventory name the diet cause.
+  public static void effectTooltip(final GatherEffectScreenTooltipsEvent evt) {
+
+    if (DietConfig.CLIENT.effectSourceTooltips.get()) {
+      evt.getTooltip().addAll(DietEffectSources.sourcesOf(evt.getEffectInstance().getEffect()));
+    }
   }
 
   public static void tooltip(final ItemTooltipEvent evt) {

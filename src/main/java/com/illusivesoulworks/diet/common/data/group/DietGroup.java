@@ -50,6 +50,9 @@ public final class DietGroup implements IDietGroup {
   private final double decayMultiplier;
   private final boolean beneficial;
   private final TagKey<Item> tag;
+  // Port feature: extra members / removals from the datapack format (see DietItemList).
+  private final DietItemList added;
+  private final DietItemList removed;
 
   private DietGroup(Builder builder) {
     this.name = builder.name;
@@ -61,6 +64,8 @@ public final class DietGroup implements IDietGroup {
     this.decayMultiplier = builder.decayMultiplier;
     this.beneficial = builder.beneficial;
     this.tag = TagKey.create(Registries.ITEM, DietCommonMod.resource(this.name));
+    this.added = builder.added;
+    this.removed = builder.removed;
   }
 
   public static IDietGroup load(CompoundTag tag) {
@@ -80,6 +85,8 @@ public final class DietGroup implements IDietGroup {
     builder.color(new DietColor(r, g, b));
     builder.gainMultiplier((float) tag.getDoubleOr("Gain", 1.0));
     builder.decayMultiplier((float) tag.getDoubleOr("Decay", 1.0));
+    builder.add(DietItemList.load(tag.getListOrEmpty("Add")));
+    builder.remove(DietItemList.load(tag.getListOrEmpty("Remove")));
     return builder.build();
   }
 
@@ -130,7 +137,21 @@ public final class DietGroup implements IDietGroup {
 
   @Override
   public boolean contains(ItemStack stack) {
-    return stack.is(this.tag);
+    // Port feature / fix #227: "remove" entries win over the tag and the "items" list.
+    return !this.removed.matches(stack) && (stack.is(this.tag) || this.added.matches(stack));
+  }
+
+  @Override
+  public boolean isExcluded(ItemStack stack) {
+    return this.removed.matches(stack);
+  }
+
+  public DietItemList getAdded() {
+    return this.added;
+  }
+
+  public DietItemList getRemoved() {
+    return this.removed;
   }
 
   @Override
@@ -143,6 +164,8 @@ public final class DietGroup implements IDietGroup {
     tag.putInt("Color", this.color.getRGB());
     tag.putDouble("Gain", this.gainMultiplier);
     tag.putDouble("Decay", this.decayMultiplier);
+    tag.put("Add", this.added.save());
+    tag.put("Remove", this.removed.save());
     return tag;
   }
 
@@ -173,6 +196,8 @@ public final class DietGroup implements IDietGroup {
     private float gainMultiplier = 1.0f;
     private float decayMultiplier = 1.0f;
     private boolean beneficial = true;
+    private final DietItemList added = new DietItemList();
+    private final DietItemList removed = new DietItemList();
 
     public Builder(String name) {
       this.name = name;
@@ -210,6 +235,20 @@ public final class DietGroup implements IDietGroup {
 
     public Builder beneficial(boolean beneficial) {
       this.beneficial = beneficial;
+      return this;
+    }
+
+    public String getName() {
+      return this.name;
+    }
+
+    public Builder add(DietItemList list) {
+      this.added.addAll(list);
+      return this;
+    }
+
+    public Builder remove(DietItemList list) {
+      this.removed.addAll(list);
       return this;
     }
 

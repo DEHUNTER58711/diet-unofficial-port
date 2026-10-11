@@ -1,0 +1,91 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "tofucraft"
+    }
+  ],
+  "groups": {
+    "proteins": [
+      "tofucraft:tofu_kinu",
+      "tofucraft:tofu_momen",
+      "tofucraft:tofu_ishi",
+      "tofucraft:tofu_hell",
+      "tofucraft:tofu_soul",
+      "tofucraft:tofu_grilled",
+      "tofucraft:tofu_miso",
+      "tofucraft:tofu_dried",
+      "tofucraft:smoketofu",
+      "tofucraft:shudofu",
+      "tofucraft:tofu_fried",
+      "tofucraft:tofu_strawberry",
+      "tofucraft:tofu_minced",
+      "tofucraft:soy_cheese",
+      "tofucraft:monster_pork_jerky",
+      "tofucraft:rotten_pork",
+      "tofucraft:yudofu",
+      "tofucraft:tofusteak",
+      "tofucraft:oage",
+      "tofucraft:natto",
+      "tofucraft:nether_natto",
+      "tofucraft:yuba",
+      "tofucraft:tofuhamburg",
+      "tofucraft:raw_tofufish",
+      "tofucraft:cooked_tofufish",
+      "tofucraft:soymeat",
+      "tofucraft:hiyayakko",
+      "tofucraft:nattohiyayakko",
+      "tofucraft:negima",
+      "tofucraft:soy_karaage",
+      "tofucraft:soymeatdon",
+      "tofucraft:misodengaku",
+      "tofucraft:miso_cheese_dengaku",
+      "tofucraft:tofu_buns_burger",
+      "tofucraft:block_tofu_grilled",
+      "tofucraft:ricenatto",
+      "tofucraft:ricenattoleek",
+      "tofucraft:rice_nether_natto",
+      "tofucraft:rice_nether_natto_leek",
+      "tofucraft:ricetofu",
+      "tofucraft:ricesoborotofu",
+      "tofucraft:tomato_soybean_stew",
+      "tofucraft:caprese"
+    ],
+    "vegetables": [
+      "tofucraft:edamame_boild",
+      "tofucraft:chili",
+      "tofucraft:sprouts",
+      "tofucraft:edamame_rice",
+      "tofucraft:tomato_soybean_stew",
+      "tofucraft:caprese",
+      "tofucraft:ricenattoleek",
+      "tofucraft:rice_nether_natto_leek"
+    ],
+    "fruits": [
+      "tofucraft:apricot",
+      "tofucraft:tofu_strawberry"
+    ],
+    "grains": [
+      "tofucraft:onigiri",
+      "tofucraft:onigiri_salt",
+      "tofucraft:yakionigiri_miso",
+      "tofucraft:yakionigiri_shoyu",
+      "tofucraft:goheimochi",
+      "tofucraft:edamame_rice",
+      "tofucraft:ricenatto",
+      "tofucraft:ricenattoleek",
+      "tofucraft:rice_nether_natto",
+      "tofucraft:rice_nether_natto_leek",
+      "tofucraft:ricetofu",
+      "tofucraft:ricesoborotofu",
+      "tofucraft:soysause_ramen",
+      "tofucraft:tofu_buns_burger",
+      "tofucraft:soymeatdon",
+      "tofucraft:longer_soystick",
+      "tofucraft:soy_pizza"
+    ],
+    "sugars": [
+      "tofucraft:goheimochi"
+    ]
+  }
+}

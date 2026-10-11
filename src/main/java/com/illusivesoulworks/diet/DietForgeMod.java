@@ -36,10 +36,13 @@ import com.illusivesoulworks.diet.common.command.DietGroupArgument;
 import com.illusivesoulworks.diet.common.config.DietConfig;
 import com.illusivesoulworks.diet.common.data.group.DietGroups;
 import com.illusivesoulworks.diet.common.data.suite.DietSuites;
-import com.illusivesoulworks.diet.common.integration.IntegrationManager;
 import com.illusivesoulworks.diet.common.network.DietForgeNetwork;
 import com.illusivesoulworks.diet.common.util.DietOverride;
 import com.illusivesoulworks.diet.common.util.DietValueGenerator;
+import com.google.gson.JsonElement;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.resources.RegistryOps;
+import net.neoforged.neoforge.common.conditions.ConditionalOps;
 import net.minecraft.commands.synchronization.ArgumentTypeInfo;
 import net.minecraft.commands.synchronization.ArgumentTypeInfos;
 import net.minecraft.commands.synchronization.SingletonArgumentInfo;
@@ -52,7 +55,6 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.InterModProcessEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
@@ -86,7 +88,6 @@ public class DietForgeMod {
           DietGroupArgument.class, SingletonArgumentInfo.contextFree(DietGroupArgument::group)));
 
   public DietForgeMod(IEventBus eventBus, ModContainer container) {
-    eventBus.addListener(this::setup);
     eventBus.addListener(this::process);
     eventBus.addListener(this::modifyAttributes);
     eventBus.addListener(this::configChanged);
@@ -106,10 +107,6 @@ public class DietForgeMod {
     DietCapabilityEventsListener.register(NeoForge.EVENT_BUS);
   }
 
-  private void setup(final FMLCommonSetupEvent evt) {
-    IntegrationManager.setup();
-  }
-
   private void configChanged(final ModConfigEvent.Reloading evt) {
     if (evt.getConfig().getSpec() == DietConfig.SERVER_SPEC) {
       DietConfig.SERVER.initializedFoodOverrides = false;
@@ -123,6 +120,11 @@ public class DietForgeMod {
   }
 
   private void addReloaders(final AddServerReloadListenersEvent evt) {
+    // Port feature: group, group entry and suite files support "neoforge:conditions".
+    ConditionalOps<JsonElement> ops = new ConditionalOps<>(
+        RegistryOps.create(JsonOps.INSTANCE, evt.getServerResources().getRegistryLookup()), evt.getConditionContext());
+    DietGroups.SERVER.setConditionOps(ops);
+    DietSuites.SERVER.setConditionOps(ops);
     evt.addListener(DietGroups.ID, DietGroups.SERVER);
     evt.addListener(DietSuites.ID, DietSuites.SERVER);
     // Suites resolve group names while loading, so groups must be applied first.

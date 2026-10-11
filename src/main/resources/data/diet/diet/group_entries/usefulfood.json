@@ -1,0 +1,30 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "usefulfood"
+    }
+  ],
+  "groups": {
+    "proteins": [
+      "usefulfood:sushi",
+      "usefulfood:squidrtentacle",
+      "usefulfood:cookedsquidtentacle"
+    ],
+    "grains": [
+      "usefulfood:sushi",
+      "usefulfood:oatmeal"
+    ],
+    "vegetables": [
+      "usefulfood:frenchfries"
+    ]
+  },
+  "remove": {
+    "vegetables": [
+      "usefulfood:oatmeal"
+    ],
+    "proteins": [
+      "usefulfood:frenchfries"
+    ]
+  }
+}

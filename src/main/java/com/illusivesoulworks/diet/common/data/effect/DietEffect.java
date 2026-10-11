@@ -26,6 +26,15 @@
 
 package com.illusivesoulworks.diet.common.data.effect;
 
+import com.illusivesoulworks.diet.platform.Services;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Optional;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
 import com.illusivesoulworks.diet.DietConstants;
 import com.illusivesoulworks.diet.api.type.IDietAttribute;
@@ -48,13 +57,125 @@ public class DietEffect implements IDietEffect {
   public final List<IDietStatusEffect> statusEffects;
   public final List<IDietCondition> conditions;
   public final UUID uuid;
+  // Port feature (#53): optional "title" of an effect (translation key or literal text).
+  public final String title;
 
   public DietEffect(UUID uuid, List<IDietAttribute> attributes,
                     List<IDietStatusEffect> statusEffects, List<IDietCondition> conditions) {
+    this(uuid, attributes, statusEffects, conditions, null);
+  }
+
+  public DietEffect(UUID uuid, List<IDietAttribute> attributes,
+                    List<IDietStatusEffect> statusEffects, List<IDietCondition> conditions,
+                    String title) {
     this.attributes = attributes;
     this.statusEffects = statusEffects;
     this.conditions = conditions;
     this.uuid = uuid;
+    this.title = title == null || title.isEmpty() ? null : title;
+  }
+
+  @Override
+  public Optional<String> getTitle() {
+    return Optional.ofNullable(this.title);
+  }
+
+  /**
+   * Port feature: effects are now synced to clients (inside the suite), so the Diet screen can
+   * show which group thresholds cause which effect (#178, #166, #53).
+   */
+  public CompoundTag save() {
+    CompoundTag tag = new CompoundTag();
+    tag.putString("UUID", this.uuid.toString());
+
+    if (this.title != null) {
+      tag.putString("Title", this.title);
+    }
+    ListTag conds = new ListTag();
+
+    for (IDietCondition condition : this.conditions) {
+      CompoundTag c = new CompoundTag();
+      ListTag groups = new ListTag();
+      condition.getGroups().forEach(g -> groups.add(StringTag.valueOf(g)));
+      c.put("Groups", groups);
+      c.putString("Match", condition.getMatchMethod().name());
+      c.putDouble("Above", condition.getAbove());
+      c.putDouble("Below", condition.getBelow());
+      conds.add(c);
+    }
+    tag.put("Conditions", conds);
+    ListTag atts = new ListTag();
+
+    for (IDietAttribute attribute : this.attributes) {
+      CompoundTag a = new CompoundTag();
+      a.putString("Name", Services.REGISTRY.getAttributeKey(attribute.getAttribute()).toString());
+      a.putInt("Operation", attribute.getOperation().id());
+      a.putDouble("Amount", attribute.getBaseAmount());
+      a.putDouble("Increment", attribute.getIncrement());
+      atts.add(a);
+    }
+    tag.put("Attributes", atts);
+    ListTag effs = new ListTag();
+
+    for (IDietStatusEffect effect : this.statusEffects) {
+      CompoundTag e = new CompoundTag();
+      e.putString("Name", Services.REGISTRY.getStatusEffectKey(effect.getEffect()).toString());
+      e.putInt("Power", effect.getBasePower());
+      e.putInt("Increment", effect.getIncrement());
+      effs.add(e);
+    }
+    tag.put("StatusEffects", effs);
+    return tag;
+  }
+
+  public static DietEffect load(CompoundTag tag) {
+    UUID uuid;
+
+    try {
+      uuid = UUID.fromString(tag.getStringOr("UUID", ""));
+    } catch (IllegalArgumentException e) {
+      uuid = UUID.randomUUID();
+    }
+    List<IDietCondition> conditions = new ArrayList<>();
+
+    for (Tag t : tag.getListOrEmpty("Conditions")) {
+
+      if (t instanceof CompoundTag c) {
+        Set<String> groups = new HashSet<>();
+        c.getListOrEmpty("Groups").forEach(g -> g.asString().ifPresent(groups::add));
+        MatchMethod match;
+
+        try {
+          match = MatchMethod.valueOf(c.getStringOr("Match", "ANY"));
+        } catch (IllegalArgumentException e) {
+          match = MatchMethod.ANY;
+        }
+        conditions.add(new DietCondition(groups, match, c.getDoubleOr("Above", 0.0),
+            c.getDoubleOr("Below", 1.0)));
+      }
+    }
+    List<IDietAttribute> attributes = new ArrayList<>();
+
+    for (Tag t : tag.getListOrEmpty("Attributes")) {
+
+      if (t instanceof CompoundTag a) {
+        Services.REGISTRY.getAttribute(Identifier.parse(a.getStringOr("Name", "minecraft:luck")))
+            .ifPresent(att -> attributes.add(new DietAttribute(att,
+                AttributeModifier.Operation.BY_ID.apply(a.getIntOr("Operation", 0)),
+                a.getDoubleOr("Amount", 0.0), a.getDoubleOr("Increment", 0.0))));
+      }
+    }
+    List<IDietStatusEffect> effects = new ArrayList<>();
+
+    for (Tag t : tag.getListOrEmpty("StatusEffects")) {
+
+      if (t instanceof CompoundTag e) {
+        Services.REGISTRY.getStatusEffect(Identifier.parse(e.getStringOr("Name", "minecraft:luck")))
+            .ifPresent(eff -> effects.add(new DietStatusEffect(eff, e.getIntOr("Power", 0),
+                e.getIntOr("Increment", 1))));
+      }
+    }
+    return new DietEffect(uuid, attributes, effects, conditions, tag.getStringOr("Title", ""));
   }
 
   @Override
@@ -167,6 +288,21 @@ public class DietEffect implements IDietEffect {
     @Override
     public MatchMethod getMatchMethod() {
       return this.match;
+    }
+
+    @Override
+    public Set<String> getGroups() {
+      return this.groups;
+    }
+
+    @Override
+    public double getAbove() {
+      return this.above;
+    }
+
+    @Override
+    public double getBelow() {
+      return this.below;
     }
 
     public int getMatches(Player player, Map<String, Float> values) {

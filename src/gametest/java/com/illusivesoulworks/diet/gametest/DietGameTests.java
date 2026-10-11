@@ -55,7 +55,8 @@ public class DietGameTests {
 
   private static final String[] TESTS =
       {"datapack_loaded", "eat_bread", "eat_cake_block", "save_reload", "effects_at_threshold",
-          "death_penalty", "clone_without_death", "natural_regen_attribute", "decay"};
+          "death_penalty", "clone_without_death", "natural_regen_attribute", "decay", "dump_foods", "group_entries", "death_penalty_disabled",
+          "suite_sync_roundtrip"};
 
   public DietGameTests(IEventBus bus) {
     FUNCTIONS.register("datapack_loaded", () -> DietGameTests::datapackLoaded);
@@ -67,6 +68,10 @@ public class DietGameTests {
     FUNCTIONS.register("clone_without_death", () -> DietGameTests::cloneWithoutDeath);
     FUNCTIONS.register("natural_regen_attribute", () -> DietGameTests::naturalRegen);
     FUNCTIONS.register("decay", () -> DietGameTests::decay);
+    FUNCTIONS.register("dump_foods", () -> DietGameTests::dumpFoods);
+    FUNCTIONS.register("group_entries", () -> DietGameTests::groupEntries);
+    FUNCTIONS.register("death_penalty_disabled", () -> DietGameTests::deathPenaltyDisabled);
+    FUNCTIONS.register("suite_sync_roundtrip", () -> DietGameTests::suiteSyncRoundtrip);
     FUNCTIONS.register(bus);
     bus.addListener(DietGameTests::registerTests);
   }
@@ -213,6 +218,103 @@ public class DietGameTests {
     ServerPlayer player = player(helper);
     helper.assertTrue(player.getAttribute(DietForgeMod.NATURAL_REGEN) != null,
         "diet:natural_regeneration not on player");
+    helper.succeed();
+  }
+
+  // QA helper: with -Ddiet.dumpFoods=<file>, writes every food item and its Diet groups
+  // (tagged / generated / none). Used to build and verify the mod-support data.
+  private static void dumpFoods(GameTestHelper helper) {
+    String file = System.getProperty("diet.dumpFoods");
+
+    if (file != null && !file.isEmpty()) {
+      ServerPlayer player = player(helper);
+      StringBuilder sb = new StringBuilder();
+      net.minecraft.core.registries.BuiltInRegistries.ITEM.forEach(item -> {
+        ItemStack stack = new ItemStack(item);
+        var food = stack.get(net.minecraft.core.component.DataComponents.FOOD);
+        boolean special = stack.is(net.minecraft.tags.TagKey.create(Registries.ITEM,
+            Identifier.fromNamespaceAndPath(DietConstants.MOD_ID, "special_food")));
+
+        if (food != null || special) {
+          java.util.List<String> tagged = new java.util.ArrayList<>();
+
+          for (IDietGroup g : DietGroups.SERVER.getGroups()) {
+            if (g.contains(stack)) {
+              tagged.add(g.getName());
+            }
+          }
+          java.util.List<String> all = DietApi.getInstance().getGroups(player, stack).stream()
+              .map(IDietGroup::getName).sorted().toList();
+          sb.append(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item)).append('\t')
+              .append(food == null ? "-" : food.nutrition()).append('\t')
+              .append(tagged.isEmpty() ? (all.isEmpty() ? "NONE" : "generated") : "tagged").append('\t')
+              .append(String.join(",", all)).append('\n');
+        }
+      });
+      try {
+        java.nio.file.Files.writeString(java.nio.file.Path.of(file), sb.toString());
+      } catch (java.io.IOException e) {
+        throw helper.assertionException("cannot write " + file);
+      }
+    }
+    helper.succeed();
+  }
+
+  // datapack format: group_entries add/remove (#227) and neoforge:conditions
+  private static void groupEntries(GameTestHelper helper) {
+    ServerPlayer player = player(helper);
+    java.util.Set<String> carrot = DietApi.getInstance()
+        .getGroups(player, new ItemStack(Items.GOLDEN_CARROT)).stream()
+        .map(IDietGroup::getName).collect(java.util.stream.Collectors.toSet());
+    helper.assertTrue(carrot.contains("fruits") && carrot.contains("vegetables"),
+        "golden carrot should be fruits+vegetables, got " + carrot);
+    java.util.Set<String> cookie = DietApi.getInstance()
+        .getGroups(player, new ItemStack(Items.COOKIE)).stream()
+        .map(IDietGroup::getName).collect(java.util.stream.Collectors.toSet());
+    helper.assertTrue(!cookie.contains("sugars") && cookie.contains("grains"),
+        "removed group still generated for cookie: " + cookie);
+    helper.assertTrue(!DietGroups.SERVER.getGroup("proteins").orElseThrow()
+        .contains(new ItemStack(Items.APPLE)), "conditional entry file was applied");
+    // synced form keeps the entries
+    IDietGroup synced = com.illusivesoulworks.diet.common.data.group.DietGroup.load(
+        DietGroups.SERVER.getGroup("sugars").orElseThrow().save());
+    helper.assertTrue(synced.isExcluded(new ItemStack(Items.COOKIE)), "removal not synced");
+    helper.succeed();
+  }
+
+  // #219: with deathPenaltyLoss = 0 nothing may be lost on death
+  private static void deathPenaltyDisabled(GameTestHelper helper) {
+    var loss = com.illusivesoulworks.diet.common.config.DietConfig.SERVER.deathPenaltyLoss;
+    int previous = loss.get();
+    loss.set(0);
+
+    try {
+      ServerPlayer old = player(helper);
+      tracker(helper, old).setValue("fruits", 0.5f);
+      ServerPlayer respawned = player(helper);
+      tracker(helper, respawned).copy(old, true);
+      helper.assertTrue(Math.abs(tracker(helper, respawned).getValue("fruits") - 0.5f) < 1e-4,
+          "value lost on death although deathPenaltyLoss = 0: "
+              + tracker(helper, respawned).getValue("fruits"));
+    } finally {
+      loss.set(previous);
+    }
+    helper.succeed();
+  }
+
+  // effects (with titles/conditions) are now part of the suite sync
+  private static void suiteSyncRoundtrip(GameTestHelper helper) {
+    var suite = DietSuites.getSuite(helper.getLevel(), "builtin").orElseThrow();
+    var copy = com.illusivesoulworks.diet.common.data.suite.DietSuite.load(suite.save());
+    helper.assertTrue(copy.getEffects().size() == suite.getEffects().size(), "effects not synced");
+    var sugar = copy.getEffects().get(2);
+    helper.assertTrue(sugar.getTitle().orElse("").equals("diet.effect.sugar"), "title not synced");
+    helper.assertTrue(sugar.getConditions().get(0).getGroups().contains("sugars"),
+        "condition groups not synced");
+    helper.assertTrue(Math.abs(sugar.getConditions().get(0).getAbove() - 0.8) < 1e-6,
+        "condition range not synced");
+    helper.assertTrue(sugar.getStatusEffects().get(0).getEffect().is(MobEffects.HUNGER),
+        "status effect not synced");
     helper.succeed();
   }
 

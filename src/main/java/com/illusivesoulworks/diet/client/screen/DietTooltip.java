@@ -27,6 +27,7 @@ package com.illusivesoulworks.diet.client.screen;
 
 import net.minecraft.core.Holder;
 import com.illusivesoulworks.diet.api.DietApi;
+import com.illusivesoulworks.diet.client.DietEffectSources;
 import com.illusivesoulworks.diet.common.data.effect.DietEffectsInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,9 +51,28 @@ public class DietTooltip {
     if (modifiers.isEmpty() && effects.isEmpty()) {
       return new ArrayList<>();
     }
+    // Port feature (#53, #178): grouped by the effect that causes them (configurable).
+    if (com.illusivesoulworks.diet.common.config.DietConfig.CLIENT.groupEffectTooltip.get()) {
+      List<Component> grouped = DietEffectSources.groupedTooltip();
+
+      if (!grouped.isEmpty()) {
+        return grouped;
+      }
+    }
     List<Component> tooltips = new ArrayList<>();
     tooltips.add(Component.translatable("tooltip.diet.effects"));
     tooltips.add(Component.empty());
+    tooltips.addAll(getLines(DietScreen.tooltip));
+    return tooltips;
+  }
+
+  /**
+   * Port: the merged attribute/effect lines of an info object, without header.
+   */
+  public static List<Component> getLines(DietEffectsInfo source) {
+    List<DietEffectsInfo.AttributeModifier> modifiers = source.getModifiers();
+    List<DietEffectsInfo.StatusEffect> effects = source.getEffects();
+    List<Component> tooltips = new ArrayList<>();
     Map<Holder<Attribute>, AttributeTooltip> mergedAttributes = new HashMap<>();
 
     for (DietEffectsInfo.AttributeModifier modifier : modifiers) {

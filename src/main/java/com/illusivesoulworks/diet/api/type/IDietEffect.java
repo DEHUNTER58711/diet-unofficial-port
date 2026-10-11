@@ -29,4 +29,11 @@ public interface IDietEffect {
   List<IDietStatusEffect> getStatusEffects();
 
   UUID getUuid();
+
+  /**
+   * Port addition (#53): optional title (translation key or literal) shown in tooltips.
+   */
+  default java.util.Optional<String> getTitle() {
+    return java.util.Optional.empty();
+  }
 }
