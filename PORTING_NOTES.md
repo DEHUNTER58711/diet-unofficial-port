@@ -41,7 +41,7 @@ Fabric/Quilt modules and SpectreLib were dropped.
 | Diet screen / button rendering | `GuiGraphics`, Tesselator `coloredBlit`, `ImageButton` | `GuiGraphicsExtractor`, tinted `blit`, `AbstractButton` drawing the same `icons.png` region, deferred tooltips | 26.3 render-state GUI |
 | Key category | `key.diet.category` string | `KeyMapping.Category` `diet:diet` → new lang key `key.category.diet.diet` (value copied from `key.diet.category` in all languages) | 26.3 key categories |
 | Curios | compile dependency on Curios API | `CuriosScreen` detected by class name (Phase B: generalised to the `buttonScreens` config list) | Curios 26.3 is only a beta |
-| Mod metadata | | `iconFile = diet_icon.png` (instead of the deprecated `logoFile`), no update/issue/display URLs | |
+| Mod metadata | `logoFile` with upstream logo | `iconFile = diet_icon.png` (128×128): **a new icon made for this port** (not upstream artwork, not an official Diet logo); no update/issue/display URLs | NeoForge 26.3 reads `iconFile`/`bannerFile` in its mod list (`DefaultModDisplayInfo`); `logoFile` is still parsed by FML 12.0.8 (`ModInfo`) but logs "uses the deprecated `logoFile` property" (`LogoFileWarningsHandler`) |
 
 ### Alpha audit (26.3 drops text whose colour has alpha 0)
 - `DietScreen`: title/group names use the configured `textColor` → `DietScreen.opaque()` adds
@@ -174,3 +174,12 @@ no raw `0xRRGGBB` colour reaches a draw call.
   machine with a GPU: drag button with Shift and relog; resource pack replacing
   `diet:textures/gui/sprites/background.png`; eat sugar to 80 % → notice + status tooltip
   "Diet: Too Much Sugar"; hover group rows; `addButton=false`; Curios inventory.
+
+## Group colours (follow-up)
+Port artwork proposed Fruits `#E5383B`, Vegetables `#4CC04A`, Proteins `#C97B5A`, Grains `#F2C230`,
+Sugars `#C45BD6`. Compared with upstream (`#d41c53`, `#31d41c`, `#d4781c`, `#d4a31c`, `#ff8fe9`)
+the hue shifts are 17°/6°/12°/1°/21°, but proteins becomes a desaturated brown (S 0.77→0.51) and
+sugars changes from light pastel pink to a darker purple (L 0.78→0.60, S 1.00→0.60) — a visibly
+different look for the most-discussed group (#178). **Kept the upstream colours** (also what
+existing screenshots, wikis and data packs show); modpacks can set `color` in a group file.
+Drawing adds alpha (`| 0xFF000000` / `ARGB.color(255, …)`).
