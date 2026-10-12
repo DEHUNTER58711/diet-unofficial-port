@@ -186,3 +186,17 @@ Drawing adds alpha (`| 0xFF000000` / `ARGB.color(255, …)`).
 
 ## Licence files (repository hygiene)
 `LICENSE` is now the plain LGPL-3.0 text (identical to `COPYING.LESSER`) so GitHub detects the licence; upstream's 25-line `LICENSE` notice was moved verbatim into `NOTICE.md`. The jar still ships `LICENSE_diet`, `COPYING_diet`, `COPYING.LESSER_diet` and `NOTICE_diet.md` (releases after 2.1.1+…unofficial.1 contain the new `LICENSE`).
+
+## Release 2.1.1+mc26.3-neoforge-unofficial.2 (metadata only, no gameplay changes)
+- **Licence notice:** `NOTICE.md` (packed as `NOTICE_diet.md`) now states right above the verbatim
+  upstream `LICENSE` quote that SpectreLib is **not** included: the jar contains no SpectreLib
+  classes, no `META-INF/jarjar`, and `neoforge.mods.toml` only depends on `neoforge` and
+  `minecraft`. The upstream quote is unchanged (historical). `LICENSE_diet` = LGPL-3.0 text.
+- **Display name:** `Diet (Unofficial Port)` (was `Diet (Unofficial NeoForge Port)`).
+- **Icon metadata (decision: `iconFile` only).** Evidence from NeoForge 26.3.0.51 / FML 12.0.8
+  bytecode: `ModListScreen$ModsList$Entry` draws `ModDisplayInfo.icon()`;
+  `DefaultModDisplayInfo.icon()` reads only `iconFile` (mod entry, then file level).
+  `logoFile` is used solely by `banner()` (the wide image in `ModListScreen$ModInfoPanel`,
+  after `bannerFile`) and makes `LogoFileWarningsHandler` log "uses the deprecated `logoFile`
+  property". Adding `logoFile` would only show the square icon as a stretched banner and add the
+  warning, so it is not set.

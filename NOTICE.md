@@ -12,11 +12,15 @@ Unofficial NeoForge 26.3 port: modified 2026 by DEHunter58711. Modified files ca
 notice below the original copyright header. This port is not affiliated with or endorsed by the
 original author — please do not report problems with it upstream.
 
-Note: the original `LICENSE` notice (below) mentions that the program redistributes SpectreLib. This port no
-longer bundles or uses SpectreLib (configuration uses NeoForge's built-in config system); the
-SpectreLib license text under `licenses/` is kept only as part of the unchanged upstream files.
-
 ## Original `LICENSE` notice (upstream, verbatim)
+
+> **Port note — SpectreLib is NOT included in this port.** The upstream 1.20.1 builds bundled
+> SpectreLib (LGPL-2.1) for their configuration screens. This NeoForge 26.3 port does not bundle,
+> embed (no jar-in-jar) or depend on SpectreLib; configuration uses NeoForge's built-in config
+> system. The SpectreLib section of the quoted notice below therefore does **not** apply to this
+> port. The text is kept unchanged as a historical quote of the upstream `LICENSE` file; the
+> upstream copy of the SpectreLib licence text remains in the source repository under
+> `licenses/spectrelib/` for reference only and is not shipped in the jar.
 
 ```
 Copyright (C) 2021-2023 Illusive Soulworks
